@@ -1,0 +1,39 @@
+PhLImage {
+	#formatNumber : 68021,
+	#architecture : '64',
+	#pharoVersion : '130',
+	#originTemplate : PhLRemoteTemplate {
+		#name : 'Pharo 13.0 - 64bit (stable)',
+		#url : URL [ 'https://files.pharo.org/image/130/latest-64.zip' ]
+	},
+	#vmManager : PhLVirtualMachineManager {
+		#imageFile : FileLocator {
+			#path : RelativePath [ 'Pharo 13.0 - 64bit (stable)', 'Pharo 13.0 - 64bit (stable).image' ],
+			#origin : #launcherImagesLocation
+		},
+		#imageFormatNumber : 68021,
+		#imageVersion : '130'
+	},
+	#launchConfigurations : OrderedCollection [
+		PhLLaunchConfiguration {
+			#image : @1,
+			#name : 'Default',
+			#imageArguments : OrderedCollection [ ],
+			#vm : PhLVirtualMachine {
+				#executableRef : FileLocator {
+					#path : RelativePath [ '130-x64', 'pharo' ],
+					#origin : #launcherVMsLocation
+				},
+				#vmBinaryRef : FileLocator {
+					#path : RelativePath [ '130-x64', 'lib', 'pharo' ],
+					#origin : #launcherVMsLocation
+				},
+				#manager : @4,
+				#flavour : '',
+				#id : '130-x64',
+				#blessing : 'stable'
+			}
+		}
+	],
+	#shouldRunInitializationScript : false
+}
