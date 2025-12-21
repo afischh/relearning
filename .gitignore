@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venvs/
+
+# Smalltalk / Pharo
+*.image
+*.changes
+pharo-vm/
+tmp/
