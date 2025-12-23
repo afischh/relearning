@@ -1,0 +1,99 @@
+/* quiet_logos — minimal */
+
+:root{
+  --ink: #111;
+  --paper: #fff;
+  --muted: #666;
+  --wine: #6b0f1a;   /* бордовый */
+  --line: #111;
+  --max: 920px;
+}
+
+*{ box-sizing: border-box; }
+
+html, body{
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  line-height: 1.55;
+}
+
+a{
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(17,17,17,.35);
+}
+a:hover{ border-bottom-color: rgba(107,15,26,.85); }
+
+.container{
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+}
+
+.header{
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--wine);
+}
+
+.header h1{
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: .2px;
+}
+.header p{
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.nav{
+  margin: 14px 0 0;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.card{
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--wine);
+  background: #fff;
+}
+
+.card h2{
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.small{
+  color: var(--muted);
+  font-size: 13px;
+}
+
+hr.sep{
+  border: 0;
+  border-top: 1px solid rgba(17,17,17,.25);
+  margin: 18px 0;
+}
+
+.list{
+  margin: 0;
+  padding-left: 18px;
+}
+.list li{
+  margin: 8px 0;
+}
+
+.footer{
+  margin-top: 24px;
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  border-top: 1px solid rgba(17,17,17,.25);
+}
