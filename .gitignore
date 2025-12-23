@@ -17,3 +17,12 @@ venvs/
 *.changes
 pharo-vm/
 tmp/
+
+# Pharo / Smalltalk
+lang/smalltalk/images/
+lang/smalltalk/play-cache/
+*.ombu
+*.sources
+
+# IDE / caches
+**/.cache/
