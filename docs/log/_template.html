@@ -1,46 +1,16 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <title>YYYY-MM-DD — дневник</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{TITLE}}</title>
+  <link rel="stylesheet" href="{{CSS_HREF}}" />
 </head>
 <body>
-  <div class="container">
-
-    <div class="header">
-      <h1>YYYY-MM-DD</h1>
-      <p>Короткая фиксация дня</p>
-      <div class="nav">
-        <a href="index.html">← К ленте</a>
-        <a href="../index.html">На главную</a>
-      </div>
-    </div>
-
+  <main class="container">
     <div class="card">
-      <p>
-        Сегодня:
-      </p>
-      <ul class="list">
-        <li>…</li>
-        <li>…</li>
-      </ul>
+      {{CONTENT}}
     </div>
-
-    <div class="card">
-      <p>
-        Ощущение / мысль:
-      </p>
-      <p>
-        …
-      </p>
-    </div>
-
-    <div class="footer">
-      quiet_logos
-    </div>
-
-  </div>
+  </main>
 </body>
 </html>
