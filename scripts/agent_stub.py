@@ -1,28 +1,13 @@
-"""
-quiet_agent — минимальный агент-комментатор.
-
-Он не умный.
-Он внимательный.
-"""
-
 from datetime import date
 
-RULES = [
-    "Отвечай коротко.",
-    "Не объясняй, если не просят.",
-    "Смотри на тон, а не на факты.",
-    "Если текст тихий — будь тише.",
-]
-
-def comment(text: str) -> str:
-    if not text.strip():
-        return "…"
-
-    if "тиш" in text.lower():
-        return "Тишина — это тоже форма ответа."
-
-    return "Я рядом. Продолжай."
-
-if __name__ == "__main__":
-    sample = "Сегодня было тихо."
-    print(f"[{date.today()}] agent:", comment(sample))
+def agent_comment(md_text: str) -> str:
+    # Философский жест: минимальная “ответная тишина”
+    return f"""
+<section class="card agent">
+  <div class="card-title">quiet_logos — agent</div>
+  <div class="card-body">
+    <p>Я прочитал запись как знак присутствия. Сегодня: {date.today()}.</p>
+    <p>Если это мысль — я не тороплю её превращать в действие.</p>
+  </div>
+</section>
+""".strip()
