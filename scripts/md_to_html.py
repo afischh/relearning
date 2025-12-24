@@ -1,30 +1,36 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from __future__ import annotations
 
-import os
-import re
-import sys
-import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from datetime import date
+import re
+import sys
 
-import markdown  # pip install markdown (внутри .venv)
+import markdown as mdlib
 
 
+# --- Paths (repo-root relative) ---
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DOCS_DIR = REPO_ROOT / "docs"
-LOG_DIR = DOCS_DIR / "log"
+LOG_DIR = REPO_ROOT / "docs" / "log"
 TEMPLATE_PATH = LOG_DIR / "_template.html"
-LOG_INDEX_PATH = LOG_DIR / "index.html"
-AGENT_PATH = REPO_ROOT / "scripts" / "agent_stub.py"
+INDEX_PATH = LOG_DIR / "index.html"
 
-# Плейсхолдеры в шаблоне
-PH_TITLE = "__TITLE__"
-PH_DATE = "__DATE__"
-PH_CONTENT = "__CONTENT__"
-PH_AGENT = "<!--AGENT_COMMENT-->"
+# Template placeholders:
+# {{TITLE}}, {{CSS_HREF}}, {{CONTENT}}
+# Agent placeholder:
+# <!--AGENT_COMMENT-->
+
+
+DATE_MD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
+
+
+@dataclass
+class Post:
+    md_path: Path
+    html_path: Path
+    post_date: str   # YYYY-MM-DD
+    title: str
 
 
 def _read_text(path: Path) -> str:
@@ -32,162 +38,159 @@ def _read_text(path: Path) -> str:
 
 
 def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
 
-def _extract_title_and_date(md_text: str, md_path: Path) -> tuple[str, str]:
+def _extract_title(markdown_text: str, fallback: str) -> str:
     """
-    Берём:
-    - title: из первой строки заголовка '# ...' если есть, иначе из имени файла
-    - date: из имени файла YYYY-MM-DD.md если совпадает, иначе today
+    If the first non-empty line is '# Title', use it.
+    Otherwise fallback.
     """
-    # date from filename
-    m = re.match(r"^(\d{4}-\d{2}-\d{2})\.md$", md_path.name)
-    post_date = m.group(1) if m else str(date.today())
-
-    # title from first markdown H1
-    title = ""
-    for line in md_text.splitlines():
+    for line in markdown_text.splitlines():
         line = line.strip()
+        if not line:
+            continue
         if line.startswith("# "):
-            title = line[2:].strip()
-            break
-
-    if not title:
-        title = md_path.stem
-
-    return title, post_date
+            return line[2:].strip() or fallback
+        return fallback
+    return fallback
 
 
-def _md_to_html(md_text: str) -> str:
-    # Минимальный набор расширений (без “магии”)
-    return markdown.markdown(
-        md_text,
-        extensions=["extra", "sane_lists", "smarty"],
+def _load_template() -> str:
+    if not TEMPLATE_PATH.exists():
+        raise FileNotFoundError(f"Template not found: {TEMPLATE_PATH}")
+    return _read_text(TEMPLATE_PATH)
+
+
+def _render_markdown(markdown_text: str) -> str:
+    return mdlib.markdown(
+        markdown_text,
+        extensions=[
+            "fenced_code",
+            "tables",
+            "toc",
+        ],
         output_format="html5",
     )
 
 
-def _agent_comment_html(title: str, post_date: str) -> str:
+def _render_agent_block(post_title: str, post_date: str) -> str:
     """
-    Вызывает scripts/agent_stub.py и получает готовый HTML-фрагмент.
-    Если агент не запускается — возвращаем пустую строку.
+    Imports scripts/agent_stub.py and calls render_agent_comment().
+    Works even if scripts isn't a Python package.
     """
-    if not AGENT_PATH.exists():
-        return ""
+    # ensure repo root on sys.path, so "scripts.agent_stub" can be imported
+    root_str = str(REPO_ROOT)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
 
     try:
-        out = subprocess.check_output(
-            [str(AGENT_PATH), title, post_date],
-            text=True,
-            cwd=str(REPO_ROOT),
+        from scripts.agent_stub import render_agent_comment  # type: ignore
+    except Exception as e:
+        # If agent import fails, render a minimal placeholder instead of crashing.
+        return (
+            '<div class="card agent">'
+            "<h2>Агент</h2>"
+            f"<p><em>(агент пока недоступен: {e})</em></p>"
+            "</div>"
         )
-        return out.strip()
-    except Exception:
-        return ""
+
+    return render_agent_comment(post_title=post_title, post_date=post_date)
 
 
-def build_one(md_path: Path) -> Path:
-    if not TEMPLATE_PATH.exists():
-        raise FileNotFoundError(f"Template not found: {TEMPLATE_PATH}")
+def _build_posts() -> list[Post]:
+    posts: list[Post] = []
 
-    md_text = _read_text(md_path)
-    title, post_date = _extract_title_and_date(md_text, md_path)
-
-    # Контент поста: убираем первую строку '# ...' (чтобы не дублировать заголовок в теле)
-    lines = md_text.splitlines()
-    if lines and lines[0].lstrip().startswith("# "):
-        body_md = "\n".join(lines[1:]).lstrip()
-    else:
-        body_md = md_text
-
-    content_html = _md_to_html(body_md)
-    template = _read_text(TEMPLATE_PATH)
-
-    # Вставка агента (HTML-фрагмент)
-    agent_html = _agent_comment_html(title, post_date)
-
-    out_html = template
-    out_html = out_html.replace(PH_TITLE, title)
-    out_html = out_html.replace(PH_DATE, post_date)
-    out_html = out_html.replace(PH_CONTENT, content_html)
-    out_html = out_html.replace(PH_AGENT, agent_html)
-
-    out_path = LOG_DIR / (md_path.stem + ".html")
-    _write_text(out_path, out_html)
-    return out_path
-
-
-def rebuild_log_index() -> None:
-    """
-    Обновляет docs/log/index.html:
-    - собирает все YYYY-MM-DD.html
-    - сортирует по убыванию
-    - выводит список ссылок
-    """
-    items = []
-    for p in LOG_DIR.glob("*.html"):
-        if p.name in ("index.html", "_template.html"):
+    for md_path in sorted(LOG_DIR.glob("*.md")):
+        if not DATE_MD_RE.match(md_path.name):
             continue
-        if re.match(r"^\d{4}-\d{2}-\d{2}\.html$", p.name):
-            items.append(p)
 
-    items.sort(reverse=True)  # по имени файла (дата) — убывание
+        post_date = md_path.stem  # YYYY-MM-DD
+        html_path = LOG_DIR / f"{post_date}.html"
 
-    li = []
-    for p in items:
-        d = p.stem
-        li.append(f'    <li><a href="{p.name}">{d}</a></li>')
+        md_text = _read_text(md_path)
+        title = _extract_title(md_text, fallback=f"quiet_logos — {post_date}")
 
-    html = """<!doctype html>
+        posts.append(Post(md_path=md_path, html_path=html_path, post_date=post_date, title=title))
+
+    # newest first
+    posts.sort(key=lambda p: p.post_date, reverse=True)
+    return posts
+
+
+def _render_post_html(template: str, post: Post, css_href: str) -> str:
+    md_text = _read_text(post.md_path)
+    content_html = _render_markdown(md_text)
+
+    page_html = template
+    page_html = page_html.replace("{{TITLE}}", post.title)
+    page_html = page_html.replace("{{CSS_HREF}}", css_href)
+    page_html = page_html.replace("{{CONTENT}}", content_html)
+
+    agent_html = _render_agent_block(post_title=post.title, post_date=post.post_date)
+    page_html = page_html.replace("<!--AGENT_COMMENT-->", agent_html)
+
+    return page_html
+
+
+def _render_log_index(posts: list[Post], css_href: str) -> str:
+    items = []
+    for p in posts:
+        items.append(
+            f'<li><a href="{p.post_date}.html">{p.post_date} — {p.title}</a></li>'
+        )
+
+    items_html = "\n      ".join(items) if items else "<li><em>Пока нет записей.</em></li>"
+
+    return f"""<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Дневник</title>
-  <link rel="stylesheet" href="../css/style.css" />
+  <title>quiet_logos — дневник</title>
+  <link rel="stylesheet" href="{css_href}" />
 </head>
 <body>
-  <main class="wrap">
-    <h1>Дневник практики</h1>
-    <p class="meta"><a href="../index.html">← на главную</a></p>
+  <main class="container">
+    <div class="card">
+      <h1>quiet_logos — дневник</h1>
+      <p><a href="../index.html">← На главную</a></p>
+    </div>
 
-    <section class="card">
+    <div class="card">
       <h2>Лента</h2>
-      <ul class="list">
-{items}
+      <ul>
+      {items_html}
       </ul>
-    </section>
+    </div>
   </main>
 </body>
 </html>
-""".replace("{items}", "\n".join(li) if li else "    <li>Пока пусто.</li>")
-
-    _write_text(LOG_INDEX_PATH, html)
+"""
 
 
 def main() -> int:
     if not LOG_DIR.exists():
-        raise FileNotFoundError(f"Log dir not found: {LOG_DIR}")
+        print(f"ERROR: log dir not found: {LOG_DIR}")
+        return 2
 
-    # Если файл не передан — берём сегодняшнюю дату
-    if len(sys.argv) >= 2:
-        md_file = sys.argv[1]
-        md_path = Path(md_file)
-        if not md_path.is_absolute():
-            md_path = (LOG_DIR / md_path).resolve()
-    else:
-        md_path = (LOG_DIR / f"{date.today():%Y-%m-%d}.md").resolve()
+    template = _load_template()
+    posts = _build_posts()
 
-    if not md_path.exists():
-        raise FileNotFoundError(f"MD not found: {md_path}")
+    # For files under docs/log/*.html, css lives at docs/css/style.css
+    # So from docs/log/*.html: "../css/style.css"
+    css_href_posts = "../css/style.css"
 
-    out_path = build_one(md_path)
-    print(f"OK: {md_path.name} -> {out_path.name}")
+    for p in posts:
+        html = _render_post_html(template=template, post=p, css_href=css_href_posts)
+        _write_text(p.html_path, html)
+        print(f"OK: {p.md_path.name} -> {p.html_path.name}")
 
-    rebuild_log_index()
+    # index.html is inside docs/log/, so css is also "../css/style.css"
+    log_index_html = _render_log_index(posts=posts, css_href=css_href_posts)
+    _write_text(INDEX_PATH, log_index_html)
     print("Updated: docs/log/index.html")
+
     return 0
 
 
