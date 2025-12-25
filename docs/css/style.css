@@ -1,36 +1,35 @@
-/* quiet_logos — rust terminal theme */
+/* quiet_logos — minimal cyberpunk + hull background */
 
 :root{
-  --bg0: #140a06;
-  --bg1: #1a0e07;
-  --rust0: #2a1208;
-  --rust1: #3a1a0c;
-  --rust2: #5a2a10;
-
-  --ink: #d7c9b8;
-  --muted: rgba(215,201,184,.78);
+  --ink: #d7e0d7;
+  --muted: rgba(215,224,215,.78);
 
   --term-bg: #060a06;
   --term-border: #1f6b2a;
   --term-text: #9dff9d;
   --term-strong: #b7ffb7;
+
+  --card-bg: rgba(8, 10, 12, 0.88);
+  --card-border: rgba(120, 255, 120, 0.25);
 }
 
 *{ box-sizing: border-box; }
 html,body{ height:100%; }
 
 body{
-  margin:0;
+  margin: 0;
   color: var(--ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Rust background: layered gradients (no images, single file) */
-  background:
-    radial-gradient(1200px 700px at 20% 10%, rgba(90,42,16,.55), transparent 60%),
-    radial-gradient(1000px 700px at 80% 20%, rgba(58,26,12,.55), transparent 62%),
-    radial-gradient(900px 700px at 55% 85%, rgba(42,18,8,.65), transparent 65%),
-    repeating-linear-gradient( 20deg, rgba(255,140,40,.03) 0 10px, rgba(10,5,3,.03) 10px 20px),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+  /* Global background: spaceship hull image */
+  background-color: #050607;
+  background-image:
+    linear-gradient(rgba(0,0,0,.58), rgba(0,0,0,.58)),
+    url("../assets/hull.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .container{
@@ -39,13 +38,19 @@ body{
   margin: 0 auto;
 }
 
+/* Content cards: minimal cyberpunk */
 .card{
-  background: rgba(10,6,4,.62);
-  border: 2px solid rgba(90,42,16,.55);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 14px;
   padding: 16px 18px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.4),
+    0 12px 30px rgba(0,0,0,.45);
   backdrop-filter: blur(2px);
+
+  /* Critical: readable text inside cards */
+  color: var(--ink);
 }
 
 .card + .card{ margin-top: 14px; }
@@ -57,7 +62,7 @@ h1,h2,h3{
   letter-spacing: .02em;
 }
 
-p{ margin: 8px 0; color: var(--ink); }
+p{ margin: 8px 0; color: inherit; }
 small{ color: var(--muted); }
 
 ul{ margin: 8px 0 0 20px; padding: 0; }
@@ -83,7 +88,40 @@ pre{
   overflow: auto;
 }
 
-/* --- Agent: terminal block --- */
+/* Buttons (used on index + prev/next nav) */
+.btn{
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(183,255,183,.55);
+  background: rgba(0,0,0,.28);
+  color: var(--term-strong);
+  text-decoration: none;
+  text-shadow: 0 0 6px rgba(140,255,140,.16);
+  box-shadow: 0 10px 18px rgba(0,0,0,.18);
+  margin-right: 10px;
+}
+.btn:hover{
+  opacity: .95;
+  background: rgba(0,0,0,.34);
+}
+
+.btn-disabled{
+  opacity: .45;
+  cursor: default;
+  border-color: rgba(183,255,183,.28);
+  background: rgba(0,0,0,.18);
+  pointer-events: none;
+}
+
+.nav-row{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Agent block: old terminal */
 .card.agent{
   background: var(--term-bg);
   border-color: var(--term-border);
@@ -92,12 +130,7 @@ pre{
 }
 
 .card.agent p{ color: var(--term-text); }
-
-.card.agent strong{
-  color: var(--term-strong);
-  letter-spacing: .02em;
-}
-
+.card.agent strong{ color: var(--term-strong); letter-spacing: .02em; }
 .card.agent em{ color: #78d878; }
 
 .card.agent code{
