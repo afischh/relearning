@@ -26,3 +26,14 @@ lang/smalltalk/play-cache/
 
 # IDE / caches
 **/.cache/
+
+# backups
+*.bak
+*.backup_*
+*.backup
+
+# generated site
+# docs/log/*.html        # публикуем сайт напрямую
+# docs/log/comments/     # публикуем комментарии агента
+# flutter build
+lang/flutter/quiet_logos/build/
