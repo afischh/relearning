@@ -87,7 +87,7 @@ def render_agent_comment(
 
     return f"""
 <div class="card agent">
-  <p><strong>quiet_logos</strong></p>
+  <p><strong>Аристарх</strong></p>
   <p>Я прочитал запись «{post_title}» от {post_date}.</p>
   {obs_html}
   {link_html}

@@ -67,7 +67,7 @@ def render_comment_html_real(inp: AgentInput) -> str:
 
 
 def render_comment_html(inp: AgentInput) -> str:
-    mode = os.environ.get("QUIET_LOGOS_MODE", "stub").strip().lower()
+    mode = os.environ.get("QUIET_LOGOS_MODE", "real").strip().lower()
     if mode == "real":
         return render_comment_html_real(inp)
     return render_comment_html_stub(inp)
