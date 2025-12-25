@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-from datetime import date
+from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -55,6 +55,7 @@ HTML_FORM = """<!doctype html>
       <textarea name="tech" placeholder="Что сделал руками: команды, мысли, планы..."></textarea>
 
       <button type="submit">Сохранить → конвертировать → обновить ленту</button>
+      <p><small>Если файл дня уже существует, запись будет <strong>добавлена</strong> в конец (а не перезаписана).</small></p>
     </form>
   </div>
 
@@ -68,22 +69,42 @@ HTML_FORM = """<!doctype html>
 def ensure_dirs() -> None:
     os.makedirs(LOG_DIR, exist_ok=True)
 
-def write_md(d: str, title: str, quiet: str, tech: str) -> str:
-    ensure_dirs()
-    md_path = os.path.join(LOG_DIR, f"{d}.md")
-    header = f"# quiet_logos — {d}\n\n"
+def _entry_block(title: str, quiet: str, tech: str) -> str:
+    ts = datetime.now().strftime("%H:%M")
+    header = f"---\n\n**{ts}**"
     if title.strip():
-        header += f"**{title.strip()}**\n\n"
+        header += f" — {title.strip()}"
+    header += "\n\n"
+
     body = (
         "## quiet\n\n" + (quiet.strip() + "\n\n" if quiet.strip() else "_..._\n\n") +
         "## tech\n\n"  + (tech.strip()  + "\n\n" if tech.strip()  else "_..._\n\n")
     )
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(header + body)
+    return header + body
+
+def write_md(d: str, title: str, quiet: str, tech: str) -> str:
+    ensure_dirs()
+    md_path = os.path.join(LOG_DIR, f"{d}.md")
+
+    if not os.path.exists(md_path):
+        # первая запись дня — создаём файл
+        header = f"# quiet_logos — {d}\n\n"
+        if title.strip():
+            header += f"**{title.strip()}**\n\n"
+        body = (
+            "## quiet\n\n" + (quiet.strip() + "\n\n" if quiet.strip() else "_..._\n\n") +
+            "## tech\n\n"  + (tech.strip()  + "\n\n" if tech.strip()  else "_..._\n\n")
+        )
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(header + body)
+        return md_path
+
+    # файл уже есть — добавляем новую секцию в конец
+    with open(md_path, "a", encoding="utf-8") as f:
+        f.write("\n" + _entry_block(title=title, quiet=quiet, tech=tech))
     return md_path
 
 def run_md_to_html() -> None:
-    # Запускаем тем же интерпретатором, что и сервер (важно для venv)
     subprocess.check_call([os.environ.get("PYTHON", "python"), MD_TO_HTML], cwd=ROOT)
 
 class Handler(BaseHTTPRequestHandler):
@@ -124,12 +145,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, f"<h1>Ошибка конвертации</h1><pre>{e}</pre>")
             return
 
-        html_path = f"/relearning/docs/log/{d}.html"
-        index_path = "/relearning/docs/log/index.html"
-
         msg = f"""
         <h1>Готово</h1>
-        <p>Создано: <code>{md_path}</code></p>
+        <p>Обновлено: <code>{md_path}</code></p>
         <ul>
           <li>Открой ленту: <code>{LOG_DIR}/index.html</code></li>
           <li>Открой запись: <code>{LOG_DIR}/{d}.html</code></li>

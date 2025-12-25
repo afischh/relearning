@@ -5,16 +5,14 @@ import re
 from collections import Counter
 
 
-# quiet_logos v1
-# Канонический агент-наблюдатель.
-# См. core/history/aristarkh_canon_v1.md
-
-
 def _extract_sections(md_text: str) -> dict[str, str]:
     """
     Выделяет разделы вида:
     ## quiet
     ## tech
+
+    Если таких блоков несколько (несколько записей за день),
+    будет взят ПОСЛЕДНИЙ — это соответствует режиму "последнее состояние".
     """
     text = md_text.replace("\r\n", "\n").replace("\r", "\n")
     parts = re.split(r"\n##\s+", "\n" + text)
@@ -36,10 +34,6 @@ def _extract_sections(md_text: str) -> dict[str, str]:
 
 
 def _keywords(md_text: str, limit: int = 5) -> list[str]:
-    """
-    Очень простая эвристика.
-    Это НЕ анализ смысла, а наблюдение формы.
-    """
     words = re.findall(r"[A-Za-zА-Яа-яЁё]{4,}", md_text.lower())
     counter = Counter(words)
     return [w for w, _ in counter.most_common(limit)]
@@ -52,6 +46,14 @@ def render_agent_comment(
     post_md: str,
     comment_href: str | None = None,
 ) -> str:
+    """
+    quiet_logos v1: агент-наблюдатель.
+
+    На статическом сайте:
+    - без "вопросов, требующих ответа"
+    - без навязывания действий
+    - только наблюдение формы + фиксация нитей
+    """
     sections = _extract_sections(post_md)
     keys = _keywords(post_md)
 
@@ -74,15 +76,14 @@ def render_agent_comment(
         observations.append("Форма записи минимальна.")
 
     if keys:
-        observations.append(
-            "Повторяющиеся нити: " + ", ".join(keys) + "."
-        )
+        observations.append("Повторяющиеся нити: " + ", ".join(keys) + ".")
 
     obs_html = "".join(f"<p>{o}</p>" for o in observations)
 
+    # Ссылка на отдельную страницу комментария уместна только на странице записи.
     link_html = ""
     if comment_href:
-        link_html = f'<p><a href="{comment_href}">Комментарий Аристарха (файл)</a></p>'
+        link_html = f'<p><a href="{comment_href}">Комментарий Аристарха</a></p>'
 
     return f"""
 <div class="card agent">
@@ -90,6 +91,5 @@ def render_agent_comment(
   <p>Я прочитал запись «{post_title}» от {post_date}.</p>
   {obs_html}
   {link_html}
-  <p><em>Вопрос:</em> Какой один малый шаг ты готов сделать дальше — записать мысль, пересобрать сайт или спокойно закрыть сессию?</p>
 </div>
 """
