@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from datetime import date
 import re
 import sys
 
@@ -13,6 +12,7 @@ import markdown as mdlib
 # --- Paths (repo-root relative) ---
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOG_DIR = REPO_ROOT / "docs" / "log"
+COMMENTS_DIR = LOG_DIR / "comments"
 TEMPLATE_PATH = LOG_DIR / "_template.html"
 INDEX_PATH = LOG_DIR / "index.html"
 
@@ -74,28 +74,66 @@ def _render_markdown(markdown_text: str) -> str:
     )
 
 
-def _render_agent_block(post_title: str, post_date: str) -> str:
+def _render_agent_block(*, post_title: str, post_date: str, post_md: str, comment_href: str | None = None) -> str:
     """
     Imports scripts/agent_stub.py and calls render_agent_comment().
     Works even if scripts isn't a Python package.
     """
-    # ensure repo root on sys.path, so "scripts.agent_stub" can be imported
     root_str = str(REPO_ROOT)
     if root_str not in sys.path:
         sys.path.insert(0, root_str)
 
     try:
         from scripts.agent_stub import render_agent_comment  # type: ignore
+        return render_agent_comment(
+            post_title=post_title,
+            post_date=post_date,
+            post_md=post_md,
+            comment_href=comment_href,
+        )
+
     except Exception as e:
-        # If agent import fails, render a minimal placeholder instead of crashing.
         return (
             '<div class="card agent">'
-            "<h2>Агент</h2>"
+            "<p><strong>quiet_logos</strong></p>"
             f"<p><em>(агент пока недоступен: {e})</em></p>"
             "</div>"
         )
 
-    return render_agent_comment(post_title=post_title, post_date=post_date)
+
+def _wrap_comment_page(*, inner_html: str, post_date: str) -> str:
+    """
+    Делает из фрагмента комментария полноценную страницу.
+    Стили: docs/css/style.css, поэтому из docs/log/comments/*.html путь: ../../css/style.css
+    """
+    css_href = "../../css/style.css"
+    title = f"quiet_logos — комментарий — {post_date}"
+
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <link rel="stylesheet" href="{css_href}" />
+</head>
+<body>
+  <main class="container">
+    <div class="card">
+      <h1>Комментарий Аристарха</h1>
+      <p>
+        <a href="../{post_date}.html">← К записи</a>
+        &nbsp;·&nbsp;
+        <a href="../index.html">Лента</a>
+      </p>
+    </div>
+
+    {inner_html}
+
+  </main>
+</body>
+</html>
+"""
 
 
 def _build_posts() -> list[Post]:
@@ -113,7 +151,6 @@ def _build_posts() -> list[Post]:
 
         posts.append(Post(md_path=md_path, html_path=html_path, post_date=post_date, title=title))
 
-    # newest first
     posts.sort(key=lambda p: p.post_date, reverse=True)
     return posts
 
@@ -127,8 +164,15 @@ def _render_post_html(template: str, post: Post, css_href: str) -> str:
     page_html = page_html.replace("{{CSS_HREF}}", css_href)
     page_html = page_html.replace("{{CONTENT}}", content_html)
 
-    agent_html = _render_agent_block(post_title=post.title, post_date=post.post_date)
-    page_html = page_html.replace("<!--AGENT_COMMENT-->", agent_html)
+    # Встроенный агентский блок: ссылка на отдельную страницу комментария.
+    comment_href = f"comments/{post.post_date}_aristarkh.html"
+    agent_html_inline = _render_agent_block(
+        post_title=post.title,
+        post_date=post.post_date,
+        post_md=md_text,
+        comment_href=comment_href,
+    )
+    page_html = page_html.replace("<!--AGENT_COMMENT-->", agent_html_inline)
 
     return page_html
 
@@ -174,19 +218,35 @@ def main() -> int:
         print(f"ERROR: log dir not found: {LOG_DIR}")
         return 2
 
+    COMMENTS_DIR.mkdir(parents=True, exist_ok=True)
+
     template = _load_template()
     posts = _build_posts()
 
-    # For files under docs/log/*.html, css lives at docs/css/style.css
-    # So from docs/log/*.html: "../css/style.css"
     css_href_posts = "../css/style.css"
 
     for p in posts:
+        md_text = _read_text(p.md_path)
+
+        # 1) Генерируем фрагмент комментария (без self-ссылки)
+        comment_fragment = _render_agent_block(
+            post_title=p.title,
+            post_date=p.post_date,
+            post_md=md_text,
+            comment_href=None,
+        )
+
+        # 2) Оборачиваем в полноценную HTML-страницу и сохраняем
+        comment_page = _wrap_comment_page(inner_html=comment_fragment, post_date=p.post_date)
+        comment_path = COMMENTS_DIR / f"{p.post_date}_aristarkh.html"
+        _write_text(comment_path, comment_page)
+
+        # 3) Рендерим страницу поста
         html = _render_post_html(template=template, post=p, css_href=css_href_posts)
         _write_text(p.html_path, html)
-        print(f"OK: {p.md_path.name} -> {p.html_path.name}")
 
-    # index.html is inside docs/log/, so css is also "../css/style.css"
+        print(f"OK: {p.md_path.name} -> {p.html_path.name} (+ comment: {comment_path.name})")
+
     log_index_html = _render_log_index(posts=posts, css_href=css_href_posts)
     _write_text(INDEX_PATH, log_index_html)
     print("Updated: docs/log/index.html")
