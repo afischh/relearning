@@ -1,179 +1,118 @@
-/* quiet_logos — minimal cyberpunk (single-file theme) */
+/* quiet_logos — rust terminal theme */
 
 :root{
-  --bg: #0b0f14;
-  --panel: rgba(255,255,255,0.035);
-  --panel2: rgba(255,255,255,0.055);
-  --text: rgba(255,255,255,0.88);
-  --muted: rgba(255,255,255,0.62);
-  --line: rgba(255,255,255,0.14);
+  --bg0: #140a06;
+  --bg1: #1a0e07;
+  --rust0: #2a1208;
+  --rust1: #3a1a0c;
+  --rust2: #5a2a10;
 
-  --accent: #7CFFB2;      /* neon mint */
-  --accent2: #7aa7ff;     /* cold blue */
-  --warn: #ff4d8d;        /* neon magenta */
+  --ink: #d7c9b8;
+  --muted: rgba(215,201,184,.78);
+
+  --term-bg: #060a06;
+  --term-border: #1f6b2a;
+  --term-text: #9dff9d;
+  --term-strong: #b7ffb7;
 }
 
-* { box-sizing: border-box; }
-html, body { height: 100%; }
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
 
 body{
-  margin: 0;
-  color: var(--text);
+  margin:0;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Rust background: layered gradients (no images, single file) */
   background:
-    radial-gradient(1200px 700px at 15% 10%, rgba(124,255,178,0.10), transparent 55%),
-    radial-gradient(900px 600px at 85% 15%, rgba(122,167,255,0.10), transparent 55%),
-    radial-gradient(1000px 900px at 50% 100%, rgba(255,77,141,0.06), transparent 60%),
-    linear-gradient(180deg, #06080b 0%, var(--bg) 55%, #070a0f 100%);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-  line-height: 1.55;
+    radial-gradient(1200px 700px at 20% 10%, rgba(90,42,16,.55), transparent 60%),
+    radial-gradient(1000px 700px at 80% 20%, rgba(58,26,12,.55), transparent 62%),
+    radial-gradient(900px 700px at 55% 85%, rgba(42,18,8,.65), transparent 65%),
+    repeating-linear-gradient( 20deg, rgba(255,140,40,.03) 0 10px, rgba(10,5,3,.03) 10px 20px),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
 .container{
-  max-width: 960px;
+  max-width: 980px;
+  padding: 28px 16px;
   margin: 0 auto;
-  padding: 18px 14px 56px;
-}
-
-a{
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(124,255,178,0.35);
-}
-a:hover{
-  border-bottom-color: var(--accent);
-  text-shadow: 0 0 10px rgba(124,255,178,0.22);
 }
 
 .card{
-  background: linear-gradient(180deg, var(--panel) 0%, rgba(255,255,255,0.02) 100%);
-  border: 1px solid var(--line);
+  background: rgba(10,6,4,.62);
+  border: 2px solid rgba(90,42,16,.55);
   border-radius: 14px;
-  padding: 16px 16px;
-  margin: 14px 0;
-  backdrop-filter: blur(6px);
-  box-shadow:
-    0 10px 22px rgba(0,0,0,0.35),
-    0 0 0 1px rgba(124,255,178,0.06) inset;
+  padding: 16px 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  backdrop-filter: blur(2px);
 }
 
-.card.agent{
-  border-color: rgba(124,255,178,0.28);
-  box-shadow:
-    0 10px 22px rgba(0,0,0,0.35),
-    0 0 0 1px rgba(124,255,178,0.10) inset,
-    0 0 22px rgba(124,255,178,0.08);
+.card + .card{ margin-top: 14px; }
+
+h1,h2,h3{
+  margin: 0 0 10px 0;
+  color: var(--term-strong);
+  text-shadow: 0 0 6px rgba(140,255,140,.18);
+  letter-spacing: .02em;
 }
 
-h1, h2, h3{
-  margin: 0 0 10px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
+p{ margin: 8px 0; color: var(--ink); }
+small{ color: var(--muted); }
 
-h1{
-  font-size: 1.35rem;
-}
-h2{
-  font-size: 1.12rem;
-  color: rgba(255,255,255,0.92);
-}
-h3{
-  font-size: 1.03rem;
-  color: rgba(255,255,255,0.90);
-}
-
-p{
-  margin: 10px 0;
-  color: var(--text);
-}
-
-small, em{
-  color: var(--muted);
-}
-
-strong{
-  color: rgba(255,255,255,0.95);
-}
-
-ul{
-  margin: 10px 0 0;
-  padding-left: 20px;
-}
+ul{ margin: 8px 0 0 20px; padding: 0; }
 li{ margin: 6px 0; }
+
+a{
+  color: var(--term-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+a:hover{ opacity: .9; }
 
 code, pre{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.95em;
-}
-
-code{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 2px 6px;
-  border-radius: 8px;
-  color: rgba(255,255,255,0.90);
 }
 
 pre{
-  background: rgba(0,0,0,0.30);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 12px 12px;
-  border-radius: 14px;
-  overflow: auto;
-  box-shadow: 0 0 0 1px rgba(122,167,255,0.06) inset;
-}
-
-blockquote{
-  margin: 12px 0;
-  padding: 10px 12px;
-  border-left: 3px solid rgba(122,167,255,0.45);
-  background: rgba(122,167,255,0.05);
-  border-radius: 10px;
-  color: rgba(255,255,255,0.80);
-}
-
-hr{
-  border: none;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  margin: 18px 0;
-}
-
-table{
-  width: 100%;
-  border-collapse: collapse;
-  margin: 12px 0;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(90,42,16,.45);
+  padding: 12px 14px;
   border-radius: 12px;
-  overflow: hidden;
-}
-th, td{
-  padding: 10px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  vertical-align: top;
-}
-th{
-  text-align: left;
-  color: rgba(255,255,255,0.92);
-  background: rgba(255,255,255,0.04);
-}
-tr:hover td{
-  background: rgba(124,255,178,0.03);
+  overflow: auto;
 }
 
-/* A subtle “scanline” effect, very light */
-body:before{
+/* --- Agent: terminal block --- */
+.card.agent{
+  background: var(--term-bg);
+  border-color: var(--term-border);
+  color: var(--term-text);
+  text-shadow: 0 0 6px rgba(140,255,140,.28);
+}
+
+.card.agent p{ color: var(--term-text); }
+
+.card.agent strong{
+  color: var(--term-strong);
+  letter-spacing: .02em;
+}
+
+.card.agent em{ color: #78d878; }
+
+.card.agent code{
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(70,160,70,.45);
+  color: var(--term-strong);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.card.agent::before{
   content:"";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(255,255,255,0.018),
-    rgba(255,255,255,0.018) 1px,
-    transparent 2px,
-    transparent 6px
-  );
-  opacity: 0.18;
-  mix-blend-mode: overlay;
+  display:block;
+  height:2px;
+  background: linear-gradient(90deg, transparent, rgba(120,255,120,.55), transparent);
+  margin-bottom: 10px;
+  filter: blur(.2px);
 }
