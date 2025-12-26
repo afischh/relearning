@@ -24,6 +24,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -32,14 +35,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # markdown нужен для scripts/md_to_html.py
-          pip install markdown
-          # openai может понадобиться quiet_logos (если он использует SDK)
-          pip install openai
+          pip install markdown openai
 
       - name: Build site (md -> html)
         run: |
           python scripts/md_to_html.py
+
+      - name: Verify homepage exists in artifact
+        run: |
+          test -f docs/index.html
+          ls -la docs | head
+          ls -la docs/log | head
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -49,7 +55,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
