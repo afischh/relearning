@@ -37,3 +37,6 @@ lang/smalltalk/play-cache/
 # docs/log/comments/     # публикуем комментарии агента
 # flutter build
 lang/flutter/quiet_logos/build/
+
+# secrets
+.env
