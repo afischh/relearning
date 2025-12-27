@@ -6,9 +6,9 @@ from pathlib import Path
 import argparse
 import re
 import sys
+import os
 
 import markdown as mdlib
-
 
 # --- Paths (repo-root relative) ---
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +16,17 @@ LOG_DIR = REPO_ROOT / "docs" / "log"
 COMMENTS_DIR = LOG_DIR / "comments"
 TEMPLATE_PATH = LOG_DIR / "_template.html"
 INDEX_PATH = LOG_DIR / "index.html"
+
+# --- dotenv (local secrets) ---
+# Load .env from repo root, and OVERRIDE any pre-existing environment variables.
+# This is intentional: local build should be driven by repo-local .env.
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv(dotenv_path=REPO_ROOT / ".env", override=True)
+except Exception:
+    # OK: build can run without python-dotenv or without .env
+    pass
+
 
 # Template placeholders:
 # {{TITLE}}, {{CSS_HREF}}, {{CONTENT}}
@@ -224,7 +235,12 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--agent-latest-only", action="store_true", help="Regenerate agent comment only for the newest post.")
     mode.add_argument("--agent-all", action="store_true", help="Regenerate agent comments for ALL posts.")
+    parser.add_argument("--diag", action="store_true", help="Print diagnostic environment info (mode/key).")
     args = parser.parse_args()
+
+    if args.diag:
+        print("DIAG: QUIET_LOGOS_MODE =", os.getenv("QUIET_LOGOS_MODE"))
+        print("DIAG: OPENAI_API_KEY set:", bool(os.getenv("OPENAI_API_KEY")))
 
     if not LOG_DIR.exists():
         print(f"ERROR: log dir not found: {LOG_DIR}")
@@ -243,11 +259,7 @@ def main() -> int:
     elif args.agent_all:
         agent_latest_only = False
     else:
-        agent_latest_only = (str(Path.cwd()) != "" and (("GITHUB_ACTIONS" in dict(**{}) ) ))  # dummy line, replaced below
-
-    # правильное определение без "магии"
-    if not (args.agent_latest_only or args.agent_all):
-        agent_latest_only = (("GITHUB_ACTIONS" in __import__("os").environ) and (__import__("os").environ.get("GITHUB_ACTIONS") == "true"))
+        agent_latest_only = (("GITHUB_ACTIONS" in os.environ) and (os.environ.get("GITHUB_ACTIONS") == "true"))
 
     COMMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -260,15 +272,12 @@ def main() -> int:
         regen_this = (not agent_latest_only) or (p.post_date == newest_date)
 
         if regen_this:
-            # генерируем свежий агентский блок
             agent_block = _render_agent_block(post_title=p.title, post_date=p.post_date, post_md=md_text)
-            # пишем отдельную страницу комментария (на будущее/архив)
             comment_page = _wrap_comment_page(inner_html=agent_block, post_date=p.post_date)
             comment_path = COMMENTS_DIR / f"{p.post_date}_aristarkh.html"
             _write_text(comment_path, comment_page)
             print(f"OK: comment regenerated: {comment_path.relative_to(REPO_ROOT)}")
         else:
-            # не дергаем API — берём существующий блок
             agent_block = _agent_block_from_existing_comment(p.post_date) or (
                 '<div class="card agent">'
                 "<p><strong>Аристарх</strong></p>"
@@ -276,12 +285,10 @@ def main() -> int:
                 "</div>"
             )
 
-        # Встраиваем в пост только карточку (без ссылки “файл”)
         html = _render_post_html(template=template, post=p, css_href=css_href_posts, agent_html_inline=agent_block)
         _write_text(p.html_path, html)
         print(f"OK: {p.md_path.name} -> {p.html_path.name}")
 
-    # индекс дневника
     _write_text(INDEX_PATH, _render_log_index(posts=posts, css_href=css_href_posts))
     print("Updated: docs/log/index.html")
 
