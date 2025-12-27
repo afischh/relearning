@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const QuietLogosApp());
@@ -38,10 +37,18 @@ class _WriterScreenState extends State<WriterScreen> {
   final _tech = TextEditingController();
 
   bool _busy = false;
-  String _status =
-      'Готов к записи. Сервер должен работать на 127.0.0.1:8008';
+  String _status = 'Готов к записи. Режим: save → build → git push.';
+  final List<String> _log = [];
 
-  final Uri _submitUrl = Uri.parse('http://127.0.0.1:8008/submit');
+  // Путь к корню репозитория — фиксирован явно
+  final String _repoPath = '/home/alex/relearning';
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _date.text = _fmtDate(now);
+  }
 
   @override
   void dispose() {
@@ -52,43 +59,103 @@ class _WriterScreenState extends State<WriterScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  String _fmtDate(DateTime d) {
+    final y = d.year.toString().padLeft(4, '0');
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
+  }
+
+  bool _validDate(String s) => RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s);
+
+  void _appendLog(String line) {
+    setState(() {
+      _log.add(line);
+      if (_log.length > 1500) {
+        _log.removeRange(0, _log.length - 1500);
+      }
+    });
+  }
+
+  String _buildMarkdown(String dateStr) {
+    final title = _title.text.trim().isEmpty ? 'Запись' : _title.text.trim();
+    final quiet = _quiet.text.trim();
+    final tech = _tech.text.trim();
+
+    return [
+      '# $title',
+      '',
+      '- DATE: $dateStr',
+      '',
+      '## Quiet',
+      quiet.isEmpty ? '_(пусто)_' : quiet,
+      '',
+      '## Tech',
+      tech.isEmpty ? '_(пусто)_' : tech,
+      '',
+    ].join('\n');
+  }
+
+  Future<void> _saveMarkdown() async {
+    final dateStr = _date.text.trim();
+    if (!_validDate(dateStr)) {
+      throw Exception('Некорректная дата. Ожидается формат YYYY-MM-DD.');
+    }
+
+    final mdPath = '$_repoPath/docs/log/$dateStr.md';
+    final mdFile = File(mdPath);
+    await mdFile.parent.create(recursive: true);
+
+    final content = _buildMarkdown(dateStr);
+    await mdFile.writeAsString(content, encoding: utf8);
+
+    _appendLog('Saved: $mdPath');
+  }
+
+  Future<void> _saveBuildPush() async {
+    if (_busy) return;
+
     setState(() {
       _busy = true;
-      _status = 'Отправляю…';
+      _status = 'Сохраняю и публикую…';
     });
 
-    try {
-      final form = <String, String>{
-        'd': _date.text.trim(),
-        'title': _title.text.trim(),
-        'quiet': _quiet.text,
-        'tech': _tech.text,
-      };
+    _appendLog('---');
+    _appendLog('Save → Build → Push started');
 
-      final resp = await http.post(
-        _submitUrl,
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: form.entries
-            .map((e) =>
-                '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
-            .join('&'),
+    try {
+      await _saveMarkdown();
+
+      final dateStr = _date.text.trim();
+      final scriptPath = 'tools/publish/git_publish.sh';
+
+      final proc = await Process.start(
+        'bash',
+        [scriptPath, dateStr, 'Publish log $dateStr (via Flutter)'],
+        workingDirectory: _repoPath,
+        runInShell: false,
       );
 
-      if (resp.statusCode == 200) {
-        setState(() {
-          _status = 'Готово. Запись сохранена и сайт пересобран.';
-        });
-      } else {
-        setState(() {
-          _status =
-              'Ошибка сервера: ${resp.statusCode}\n${_safeSnippet(resp.body)}';
-        });
-      }
+      proc.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) => _appendLog(line));
+
+      proc.stderr
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) => _appendLog('ERR: $line'));
+
+      final exitCode = await proc.exitCode;
+
+      setState(() {
+        _status = exitCode == 0
+            ? 'Готово. Запись сохранена, сайт собран и отправлен на GitHub.'
+            : 'Ошибка публикации (code $exitCode). См. лог.';
+      });
     } catch (e) {
       setState(() {
-        _status =
-            'Ошибка запроса: $e\nПроверь, что journal_server.py запущен.';
+        _status = 'Ошибка: $e';
       });
     } finally {
       setState(() {
@@ -98,8 +165,7 @@ class _WriterScreenState extends State<WriterScreen> {
   }
 
   void _openIndex() async {
-    const path =
-        'file:///home/alex/relearning/docs/log/index.html';
+    const path = 'file:///home/alex/relearning/docs/log/index.html';
     try {
       await Process.run('xdg-open', [path]);
       setState(() {
@@ -110,11 +176,6 @@ class _WriterScreenState extends State<WriterScreen> {
         _status = 'Не удалось открыть ленту: $e';
       });
     }
-  }
-
-  String _safeSnippet(String s) {
-    final t = s.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return t.length > 400 ? '${t.substring(0, 400)}…' : t;
   }
 
   @override
@@ -168,9 +229,8 @@ class _WriterScreenState extends State<WriterScreen> {
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: Text(
-                      _busy ? 'Отправляю…' : 'Сохранить → пересобрать сайт'),
+                  onPressed: _busy ? null : _saveBuildPush,
+                  child: Text(_busy ? 'Публикую…' : 'Сохранить → собрать → push'),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
@@ -182,6 +242,19 @@ class _WriterScreenState extends State<WriterScreen> {
                   _status,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.75),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _Card(
+                  title: 'Лог',
+                  child: SizedBox(
+                    height: 220,
+                    child: SingleChildScrollView(
+                      child: Text(
+                        _log.join('\n'),
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -208,8 +281,7 @@ class _Card extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             child,
           ],
